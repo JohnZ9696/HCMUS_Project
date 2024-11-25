@@ -7,8 +7,10 @@
 struct Players {
     std::string username = "Unknown";
     float winrate = 0.0;
+    float total_winrate = 0.0;
     std::string favorite_strategy;
     int wins = 0;
+    int battles = 0;
     int total_wins = 0;
     int total_battles = 0;
     Cards cards[5];

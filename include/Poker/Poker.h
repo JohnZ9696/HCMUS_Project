@@ -171,7 +171,7 @@ void Poker(std::vector<Players> &players, int playerAmount) {
         }
     }
 
-    // Example: Print cards for debugging
+    // Print cards for debugging
     // for (const auto& player : players) {
     //     std::cout << "Player: " << player.username << "\n";
     //     for (const auto& card : player.cards) {

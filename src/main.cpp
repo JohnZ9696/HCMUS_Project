@@ -655,6 +655,32 @@ int main(int argc, char*argv[]) {
                             std::vector<int> winners = findWinner(players);
                             for (int winner : winners) {
                                 std::cout << "Winner: " << players[winner].username << " with hand " << players[winner].handStrength << "\n";
+                                if (isPVP) {
+                                    players[winner].wins++;
+                                    players[winner].total_wins++;
+                                }
+                                else if (winner == 0) {
+                                    players[0].wins++;
+                                    players[0].total_wins++;
+                                    break;
+                                }
+                            }
+                            for (auto& player : players) {
+                                if (isPVP) {
+                                    player.total_battles++;
+                                    player.battles ++;
+                                    player.winrate = (player.wins / player.battles)*100;
+                                    player.total_winrate = (player.total_wins / player.total_battles)*100;
+                                    std::cout << player.username << ' ' << player.winrate << std::endl;
+                                }
+                                else if (!isPVP) {
+                                    players[0].total_battles++;
+                                    players[0].battles ++;
+                                    players[0].winrate = (player.wins / player.battles)*100;
+                                    players[0].total_winrate = (player.total_wins / player.total_battles)*100;
+                                    std::cout << players[0].username << ' ' << players[0].winrate << std::endl;
+                                    break;
+                                }
                             }
                         } 
                     }
