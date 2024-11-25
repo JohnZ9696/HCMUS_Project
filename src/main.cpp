@@ -33,6 +33,15 @@ int main(int argc, char*argv[]) {
 
     create_Window(window, renderer);
 
+    SDL_Surface* icon = IMG_Load("image/game_icon.png"); // Đường dẫn đến tệp ảnh icon
+    if (!icon) {
+        std::cerr << "Failed to load icon: " << IMG_GetError() << std::endl;
+    } else {
+        // Đặt icon cho cửa sổ
+        SDL_SetWindowIcon(window, icon);
+        SDL_FreeSurface(icon); // Giải phóng surface sau khi dùng
+    }  
+
 
     //Loading
     TTF_Font* font = TTF_OpenFont("fonts/loading.ttf", 110); // Thay đường dẫn bằng file font của bạn
@@ -123,6 +132,29 @@ int main(int argc, char*argv[]) {
         close(window, renderer, backgroundTexture, nullptr, nullptr, 0);
         return -1;
     }
+
+    SDL_Surface* cursorSurface = IMG_Load("image/cursor.png");
+    if (!cursorSurface) {
+        SDL_Log("Could not load cursor image: %s", IMG_GetError());
+        IMG_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    SDL_Cursor* customCursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
+    if (!customCursor) {
+        SDL_Log("Could not create custom cursor: %s", SDL_GetError());
+        SDL_FreeSurface(cursorSurface);
+        IMG_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    SDL_SetCursor(customCursor);
+
+    SDL_FreeSurface(cursorSurface);
 
     //Game title image
     SDL_Rect title_Rect = { 275, 50, 650, 200 }; 
@@ -592,6 +624,9 @@ int main(int argc, char*argv[]) {
                     if (isMouseInside(backButton_Rect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         status = 4;
+                        plrIdSwitch = 0;
+                        wrongAnswer = false;
+                        clearAllPlayerName(players, playerAmount);
                     }
                     if (isMouseInside(inputUsernameBox, mouseX, mouseY) && !inputActive) {
                         inputActive = true;

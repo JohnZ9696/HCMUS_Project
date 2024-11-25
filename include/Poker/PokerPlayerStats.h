@@ -5,7 +5,7 @@
 #include "PokerCards.h"
 
 struct Players {
-    std::string username = "Unknown";
+    std::string username = "";
     float winrate = 0.0;
     float total_winrate = 0.0;
     std::string favorite_strategy;

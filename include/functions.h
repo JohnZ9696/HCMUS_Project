@@ -36,6 +36,12 @@ bool alreadyUsedName (std::vector<Players> &players, std::string name, short pla
     return false;
 }
 
+void clearAllPlayerName(std::vector<Players> players, int playerAmount) {
+    for (int i = 0; i < playerAmount; i++) {
+        players[i].username = "";
+    }
+}
+
 void handleHoverSound(bool& isHovering, bool& wasHovering, Mix_Chunk* hoverSound) {
     if (isHovering && !wasHovering) {
         Mix_PlayChannel(-1, hoverSound, 0);
