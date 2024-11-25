@@ -11,7 +11,8 @@ Status numbers:
 1: Choose gameplay
 2: Settings
 3: Choose PvP or PvE (Gamemode)
-4: Start Game
+4: Enter number of players
+5: Enter players' names
 */
 
 /*
@@ -432,7 +433,7 @@ int main(int argc, char*argv[]) {
     bool quit = false;
     SDL_Event e;
 
-    bool wasHovering = false, wrongAnswer = false;
+    bool wasHovering = false, wrongAnswer = false, isPVP = false;
     short plrIdSwitch = 0;
     int status = 0;
     int game_status = 0;
@@ -545,13 +546,20 @@ int main(int argc, char*argv[]) {
                     }
                     else if (isMouseInside(PVP_buttonRect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        isPVP = true;
                         status = 4;
                     }
                     else if (isMouseInside(PVE_buttonRect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        isPVP = false;
+                        status = 4;
                     }
                 }
                 else if (status == 4) {
+                    if (isMouseInside(backButton_Rect, mouseX, mouseY)) {
+                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        status = 3;
+                    }
                     if (isMouseInside(inputBox, mouseX, mouseY) && !inputActive) {
                         inputActive = true;
                         inputText = "";
@@ -571,11 +579,20 @@ int main(int argc, char*argv[]) {
                             wrongAnswer = false;
                             playerAmount = nums;
                             players.resize(playerAmount);
+                            if (!isPVP) {
+                                for (int i = 1; i < playerAmount; i++) {
+                                    players[i].username = "Bot " + std::to_string(i);
+                                }
+                            }
                             status = 5;
                         }
                     }
                 }
                 else if (status == 5) {
+                    if (isMouseInside(backButton_Rect, mouseX, mouseY)) {
+                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        status = 4;
+                    }
                     if (isMouseInside(inputUsernameBox, mouseX, mouseY) && !inputActive) {
                         inputActive = true;
                         inputUsernameText = "";
@@ -587,7 +604,7 @@ int main(int argc, char*argv[]) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         if (inputUsernameText != "Enter here" && inputUsernameText != "" && !alreadyUsedName(players, inputUsernameText, playerAmount, plrIdSwitch)) {
                             players[plrIdSwitch++].username = inputUsernameText;
-                            if (plrIdSwitch >= playerAmount) {
+                            if (plrIdSwitch >= playerAmount && isPVP || !isPVP && plrIdSwitch <= 1) {
                                 status = 6;
                                 plrIdSwitch = 0;
                             }
@@ -630,7 +647,7 @@ int main(int argc, char*argv[]) {
                     }
                     else if (!(players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0) && isMouseInside(backButton_Rect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
-                        if (plrIdSwitch < playerAmount-1) plrIdSwitch++;
+                        if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
                         else {
                             for (auto& player : players) {
                                 player.handStrength = evaluateHandStrength(player.cards);
@@ -661,7 +678,7 @@ int main(int argc, char*argv[]) {
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, backgroundTexture, nullptr, nullptr);
         if (status != 0) {
-            if (status == 1 || status == 2 || status == 3) {
+            if (status == 1 || status == 2 || status == 3 || status == 4 || status == 5) {
                 SDL_RenderCopy(renderer, backButton_Texture, nullptr, isMouseInside(backButton_Rect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
             }
         }
