@@ -7,7 +7,6 @@
 #include <array>
 #include "PokerPlayerStats.h"
 
-//Prototype
 std::string evaluateHandStrength(const Cards cards[5]);
 
 int handRank(const std::string& handStrength);
@@ -18,7 +17,7 @@ std::vector<int> findWinner(const std::vector<Players>& players);
 
 void Poker(std::vector<Players> &players, int playerAmount);
 
-//Definition
+
 std::string evaluateHandStrength(const Cards cards[5]) {
     // Sort cards by rank
     std::array<int, 5> ranks;
@@ -88,7 +87,7 @@ int handRank(const std::string& handStrength) {
     if (handStrength == "Three of a Kind") return 4;
     if (handStrength == "Two Pair") return 3;
     if (handStrength == "One Pair") return 2;
-    return 1; // High Card
+    return 1;
 }
 
 bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string& strength1, const std::string& strength2) {

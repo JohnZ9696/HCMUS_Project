@@ -2,7 +2,7 @@
 #define PLAYERS_H
 
 #include <string>
-#include "PokerCards.h"
+#include "Poker/PokerCards.h"
 
 struct Players {
     std::string username = "";
