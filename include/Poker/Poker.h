@@ -90,13 +90,56 @@ int handRank(const std::string& handStrength) {
     return 1;
 }
 
+void updateStrategy(int plr_idx, std::vector<Players> &players) {
+    if (players[plr_idx].handStrength == "Straight Flush") players[plr_idx].Straight_flush++;
+    else if (players[plr_idx].handStrength == "Four of a Kind") players[plr_idx].Four_of_a_kind++;
+    else if (players[plr_idx].handStrength == "Full House") players[plr_idx].Full_house++;
+    else if (players[plr_idx].handStrength == "Flush") players[plr_idx].Flush++;
+    else if (players[plr_idx].handStrength == "Straight") players[plr_idx].Straight++;
+    else if (players[plr_idx].handStrength == "Three of a Kind") players[plr_idx].Three_of_a_kind++;
+    else if (players[plr_idx].handStrength == "Two Pair") players[plr_idx].Two_pair++;
+    else if (players[plr_idx].handStrength == "One Pair") players[plr_idx].One_pair++;
+    else if (players[plr_idx].handStrength == "High Card") players[plr_idx].High_card++;
+}
+
+void findFavoriteStrategy(std::vector<Players> &players) {
+    for (auto& player : players) {
+    // Create a vector of pairs to represent strategy types and their priorities
+    std::vector<std::pair<int, std::string>> strategies = {
+        {player.Straight_flush, "Straight Flush"},
+        {player.Four_of_a_kind, "Four of a Kind"},
+        {player.Full_house, "Full House"},
+        {player.Flush, "Flush"}, 
+        {player.Straight, "Straight"},
+        {player.Three_of_a_kind, "Three of a Kind"},
+        {player.Two_pair, "Two Pair"},
+        {player.One_pair, "One Pair"},
+        {player.High_card, "High Card"}
+    };
+
+    // Find the strategy with the highest priority (ties resolved by order)
+    auto best_strategy = std::max_element(
+        strategies.begin(),
+        strategies.end(),
+        [](const auto& a, const auto& b) {
+            return a.first < b.first; // Compare values
+        }
+    );
+
+    // If no valid strategy (all zero), skip this player
+    if (best_strategy->first == 0) continue;
+
+    // Assign the favorite strategy
+    player.favorite_strategy = best_strategy->second;
+    }
+}
+
 bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string& strength1, const std::string& strength2) {
-    // Compare hand ranks first
-    int rank1 = handRank(strength1);
+      int rank1 = handRank(strength1);
     int rank2 = handRank(strength2);
     if (rank1 != rank2) return rank1 > rank2;
 
-    // If hand ranks are the same, apply tie-breaking logic
+    // Tie-breaking logic for specific hand strengths
     std::array<int, 5> ranks1, ranks2;
     for (int i = 0; i < 5; ++i) {
         ranks1[i] = hand1[i].rank;
@@ -107,13 +150,116 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     std::sort(ranks1.rbegin(), ranks1.rend());
     std::sort(ranks2.rbegin(), ranks2.rend());
 
-    for (int i = 0; i < 5; ++i) {
-        if (ranks1[i] != ranks2[i]) {
-            return ranks1[i] > ranks2[i];
+    if (strength1 == "Straight Flush" || strength1 == "Straight") {
+        // Compare the highest card in the straight
+        return ranks1[0] > ranks2[0];
+    }
+
+    if (strength1 == "Four of a Kind") {
+        // Compare the four cards, then the kicker
+        int four1 = -1, four2 = -1, kicker1 = -1, kicker2 = -1;
+        for (int r : ranks1) {
+            if (std::count(ranks1.begin(), ranks1.end(), r) == 4) four1 = r;
+            else kicker1 = r;
+        }
+        for (int r : ranks2) {
+            if (std::count(ranks2.begin(), ranks2.end(), r) == 4) four2 = r;
+            else kicker2 = r;
+        }
+        if (four1 != four2) return four1 > four2;
+        return kicker1 > kicker2;
+    }
+
+    if (strength1 == "Full House") {
+        // Compare the three cards, then the pair
+        int three1 = -1, three2 = -1, pair1 = -1, pair2 = -1;
+        for (int r : ranks1) {
+            if (std::count(ranks1.begin(), ranks1.end(), r) == 3) three1 = r;
+            else pair1 = r;
+        }
+        for (int r : ranks2) {
+            if (std::count(ranks2.begin(), ranks2.end(), r) == 3) three2 = r;
+            else pair2 = r;
+        }
+        if (three1 != three2) return three1 > three2;
+        return pair1 > pair2;
+    }
+
+    if (strength1 == "Flush") {
+        // Compare cards one by one in descending order
+        for (int i = 0; i < 5; ++i) {
+            if (ranks1[i] != ranks2[i]) return ranks1[i] > ranks2[i];
         }
     }
 
-    // If ranks are identical, return false (tie)
+    if (strength1 == "Three of a Kind") {
+        // Compare the three cards, then the kickers
+        int three1 = -1, three2 = -1;
+        std::vector<int> kickers1, kickers2;
+        for (int r : ranks1) {
+            if (std::count(ranks1.begin(), ranks1.end(), r) == 3) three1 = r;
+            else kickers1.push_back(r);
+        }
+        for (int r : ranks2) {
+            if (std::count(ranks2.begin(), ranks2.end(), r) == 3) three2 = r;
+            else kickers2.push_back(r);
+        }
+        if (three1 != three2) return three1 > three2;
+        std::sort(kickers1.rbegin(), kickers1.rend());
+        std::sort(kickers2.rbegin(), kickers2.rend());
+        for (size_t i = 0; i < kickers1.size(); ++i) {
+            if (kickers1[i] != kickers2[i]) return kickers1[i] > kickers2[i];
+        }
+    }
+
+    if (strength1 == "Two Pair") {
+        // Compare the pairs, then the kicker
+        std::vector<int> pairs1, pairs2;
+        int kicker1 = -1, kicker2 = -1;
+        for (int r : ranks1) {
+            if (std::count(ranks1.begin(), ranks1.end(), r) == 2) pairs1.push_back(r);
+            else kicker1 = r;
+        }
+        for (int r : ranks2) {
+            if (std::count(ranks2.begin(), ranks2.end(), r) == 2) pairs2.push_back(r);
+            else kicker2 = r;
+        }
+        std::sort(pairs1.rbegin(), pairs1.rend());
+        std::sort(pairs2.rbegin(), pairs2.rend());
+        for (size_t i = 0; i < pairs1.size(); ++i) {
+            if (pairs1[i] != pairs2[i]) return pairs1[i] > pairs2[i];
+        }
+        return kicker1 > kicker2;
+    }
+
+    if (strength1 == "One Pair") {
+        // Compare the pair, then the kickers
+        int pair1 = -1, pair2 = -1;
+        std::vector<int> kickers1, kickers2;
+        for (int r : ranks1) {
+            if (std::count(ranks1.begin(), ranks1.end(), r) == 2) pair1 = r;
+            else kickers1.push_back(r);
+        }
+        for (int r : ranks2) {
+            if (std::count(ranks2.begin(), ranks2.end(), r) == 2) pair2 = r;
+            else kickers2.push_back(r);
+        }
+        if (pair1 != pair2) return pair1 > pair2;
+        std::sort(kickers1.rbegin(), kickers1.rend());
+        std::sort(kickers2.rbegin(), kickers2.rend());
+        for (size_t i = 0; i < kickers1.size(); ++i) {
+            if (kickers1[i] != kickers2[i]) return kickers1[i] > kickers2[i];
+        }
+    }
+
+    if (strength1 == "High Card") {
+        // Compare cards one by one in descending order
+        for (int i = 0; i < 5; ++i) {
+            if (ranks1[i] != ranks2[i]) return ranks1[i] > ranks2[i];
+        }
+    }
+
+    // If everything is the same, return false (tie)
     return false;
 }
 
