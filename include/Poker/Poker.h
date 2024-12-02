@@ -17,6 +17,167 @@ std::vector<int> findWinner(const std::vector<Players>& players);
 
 void Poker(std::vector<Players> &players, int playerAmount);
 
+void renderScrollableContent(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Players> players, int playerAmount, int cardAmount, SDL_Texture* cardTextures[], std::vector<int> winners_idx) {
+    int lineHeight = 125;   
+
+    // Clip content to the frame's area
+    SDL_Rect viewport = { 70, 140, 1090, 470 };
+    SDL_RenderSetClipRect(renderer, &viewport);
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 200, 200, 200, 0);
+    SDL_RenderFillRect(renderer, &viewport);
+
+    SDL_Color textColor = { 255, 255, 255, 255 };
+    SDL_Color winnerColor = { 255, 255, 0, 255 };
+
+    // Use a set for faster winner checks
+    std::unordered_set<int> winners(winners_idx.begin(), winners_idx.end());
+
+    SDL_Rect textRect, cardRect, handStrengthRect;
+    for (int i = 0; i < playerAmount; ++i) {
+        int y = 170 + i * lineHeight - scrollOffset;
+
+        // Skip players outside the viewport
+        if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
+            continue;
+        }
+
+        bool winner = winners.find(i) != winners.end();
+        SDL_Color currentColor = winner ? winnerColor : textColor;
+
+        // Render player name
+        std::string text = players[i].username + ':';
+        SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), currentColor);
+        SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+        textRect = { 80, y, textSurface->w, textSurface->h };
+        SDL_RenderCopy(renderer, textTexture, nullptr, &textRect);
+
+        // Render player cards
+        for (int j = 0; j < cardAmount; ++j) {
+            cardRect = { textRect.x + textSurface->w + 10 + j * 90, y - 30, 80, 105 };
+            SDL_RenderCopy(renderer, cardTextures[players[i].card_id[j]], nullptr, &cardRect);
+        }
+
+        // Render hand strength
+        std::string handStrength = '(' + players[i].handStrength + ')';
+        SDL_Surface* handStrengthSurface = TTF_RenderText_Solid(font, handStrength.c_str(), currentColor);
+        SDL_Texture* handStrengthTexture = SDL_CreateTextureFromSurface(renderer, handStrengthSurface);
+        handStrengthRect = { cardRect.x + 90, y, handStrengthSurface->w - static_cast<int>(handStrength.length()*3+text.length()*3-2)*2+30, handStrengthSurface->h};
+        SDL_RenderCopy(renderer, handStrengthTexture, nullptr, &handStrengthRect);
+
+        // Free resources
+        SDL_FreeSurface(textSurface);
+        SDL_DestroyTexture(textTexture);
+        SDL_FreeSurface(handStrengthSurface);
+        SDL_DestroyTexture(handStrengthTexture);
+    }
+
+    SDL_RenderSetClipRect(renderer, nullptr);
+}
+
+bool cmp(const Players& a, const Players& b) {
+    return a.wins > b.wins; // Sort in descending order based on score
+}
+
+void renderLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Players> players, int playerAmount, std::vector<int> winners_idx, SDL_Texture* top1Crown) {
+    int lineHeight = 70;
+
+    // Clip content to the frame's area
+    SDL_Rect viewport = { 70, 200, 1100, 400 };
+    SDL_RenderSetClipRect(renderer, &viewport);
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 200, 200, 200, 0);
+    SDL_RenderFillRect(renderer, &viewport);
+
+    SDL_Color textColor = { 255, 255, 255, 255 };
+    SDL_Color winnerColor = { 255, 255, 0, 255 };
+
+    // Use a set for faster winner checks
+    std::unordered_set<int> winners(winners_idx.begin(), winners_idx.end());
+
+    SDL_Rect textRect, crownRect;
+    for (int i = 0; i < playerAmount; ++i) {
+        int y = 200 + i * lineHeight - scrollOffset;
+
+        // Skip players entirely outside the viewport
+        if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
+            continue;
+        }
+
+        bool isWinner = winners.find(i) != winners.end();
+        SDL_Color currentColor = isWinner ? winnerColor : textColor;
+
+        // Render rank
+        std::string rank = std::to_string(i + 1);
+        if (i > 0) {
+            SDL_Surface* rankSurface = TTF_RenderText_Solid(font, rank.c_str(), currentColor);
+            SDL_Texture* rankTexture = SDL_CreateTextureFromSurface(renderer, rankSurface);
+            textRect = { 120 - static_cast<int>(rank.size()) * 15, y, rankSurface->w, rankSurface->h };
+            SDL_RenderCopy(renderer, rankTexture, nullptr, &textRect);
+            SDL_FreeSurface(rankSurface);
+            SDL_DestroyTexture(rankTexture);
+        } else {
+            // Render crown for top 1
+            crownRect = { 85, y - 5, 65, 50 };
+            SDL_RenderCopy(renderer, top1Crown, nullptr, &crownRect);
+        }
+
+        // Render username
+        std::string username = players[i].username;
+        SDL_Surface* usernameSurface = TTF_RenderText_Solid(font, username.c_str(), currentColor);
+        SDL_Texture* usernameTexture = SDL_CreateTextureFromSurface(renderer, usernameSurface);
+        textRect = { 330 - static_cast<int>(username.size()) * 15, y, usernameSurface->w, usernameSurface->h };
+        SDL_RenderCopy(renderer, usernameTexture, nullptr, &textRect);
+        SDL_FreeSurface(usernameSurface);
+        SDL_DestroyTexture(usernameTexture);
+
+        // Render wins
+        std::string wins = std::to_string(players[i].wins);
+        SDL_Surface* winsSurface = TTF_RenderText_Solid(font, wins.c_str(), currentColor);
+        SDL_Texture* winsTexture = SDL_CreateTextureFromSurface(renderer, winsSurface);
+        textRect = { 550 - static_cast<int>(wins.size()) * 19, y, winsSurface->w, winsSurface->h };
+        SDL_RenderCopy(renderer, winsTexture, nullptr, &textRect);
+        SDL_FreeSurface(winsSurface);
+        SDL_DestroyTexture(winsTexture);
+
+        // Render win rate
+        std::string winrate = std::to_string(static_cast<int>(std::round(players[i].winrate)));
+        SDL_Surface* winrateSurface = TTF_RenderText_Solid(font, winrate.c_str(), currentColor);
+        SDL_Texture* winrateTexture = SDL_CreateTextureFromSurface(renderer, winrateSurface);
+        textRect = { 700 - static_cast<int>(winrate.size()) * 17, y, winrateSurface->w, winrateSurface->h };
+        SDL_RenderCopy(renderer, winrateTexture, nullptr, &textRect);
+        SDL_FreeSurface(winrateSurface);
+        SDL_DestroyTexture(winrateTexture);
+
+        // Render favorite strategy
+        std::string strategy = players[i].favorite_strategy;
+        SDL_Surface* strategySurface = TTF_RenderText_Solid(font, strategy.c_str(), currentColor);
+        SDL_Texture* strategyTexture = SDL_CreateTextureFromSurface(renderer, strategySurface);
+        textRect = { 1020 - static_cast<int>(strategy.size()) * 15, y, strategySurface->w - static_cast<int>(strategy.size()) * 5, strategySurface->h };
+        SDL_RenderCopy(renderer, strategyTexture, nullptr, &textRect);
+        SDL_FreeSurface(strategySurface);
+        SDL_DestroyTexture(strategyTexture);
+    }
+
+    SDL_RenderSetClipRect(renderer, nullptr);
+}
+
+
+bool alreadyUsedName (std::vector<Players> &players, std::string name, short playerAmount, short plrOrder) {
+    if (playerAmount == 0 ) return false;
+    for (int i = 0; i < playerAmount; i++) {
+        if (i != plrOrder && players[i].username == name) return true;
+    }
+    return false;
+}
+
+void clearAllPlayerName(std::vector<Players> players, int playerAmount) {
+    for (int i = 0; i < playerAmount; i++) {
+        players[i].username = "";
+    }
+}
 
 std::string evaluateHandStrength(const Cards cards[5]) {
     // Sort cards by rank
@@ -296,7 +457,6 @@ void Poker(std::vector<Players> &players, int playerAmount) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 51);
-    
     // Assign random cards to players
     for (int i = 0; i < playerAmount; i++) {
         for (int j = 0; j < 5; j++) {
@@ -305,7 +465,7 @@ void Poker(std::vector<Players> &players, int playerAmount) {
                 random_number = dist(gen);
             } while (mark[random_number] != 0);
 
-            mark[random_number] = 1; // Mark card as used
+            mark[random_number] = 1; // sMark card as used
             players[i].card_id[j] = random_number;
 
             // Map card_id to rank and suit
@@ -325,3 +485,107 @@ void Poker(std::vector<Players> &players, int playerAmount) {
     // }
 
 }
+void PVE_Poker(std::vector<Players> &players, int playerAmount) {
+    // Initialize random number generator
+    int mark[52] = {0};
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(0, 51);
+
+    for (int i = 0; i < playerAmount; i++) {
+        std::array<int, 4> suitCount = {0, 0, 0, 0}; // Track suit counts
+        std::array<int, 13> rankCount = {0};         // Track rank counts
+
+        for (int j = 0; j < 5; j++) {
+            int random_number = -1;
+            int attempts = 0;
+
+            if (i == 0) { // First player: Aim for diverse ranks and suits
+                do {
+                    random_number = dist(gen);
+                    int rankIndex = random_number / 4;
+                    int suitIndex = random_number % 4;
+
+                    // Prefer cards with unique rank and suit
+                    if (suitCount[suitIndex] == 0 && rankCount[rankIndex] == 0 && mark[random_number] == 0) {
+                        break;
+                    }
+
+                    // Fallback to any unused card after too many attempts
+                    if (++attempts > 100) {
+                        while (mark[random_number] != 0) {
+                            random_number = dist(gen);
+                        }
+                        break;
+                    }
+                } while (true);
+            } else { // Other players: Increase chances for strong hands
+                if (j < 3) { 
+                    // Prioritize cards for flush or straight
+                    int targetSuit = dist(gen) % 4;
+                    int targetRank = (j == 0) ? dist(gen) % 10 : (players[i].cards[j - 1].rank + 1) % 13;
+
+                    do {
+                        random_number = targetRank * 4 + targetSuit; // Generate card for flush/straight
+                        if (random_number >= 0 && random_number < 52 && mark[random_number] == 0) {
+                            break;
+                        }
+
+                        if (++attempts > 100) {
+                            while (mark[random_number] != 0) {
+                                random_number = dist(gen);
+                            }
+                            break;
+                        }
+                    } while (true);
+                } else if (j == 3) { 
+                    // Aim for pairs or three-of-a-kind
+                    int targetRank = players[i].cards[0].rank; // Match first card's rank
+                    int targetSuit = dist(gen) % 4;
+
+                    do {
+                        random_number = targetRank * 4 + targetSuit;
+                        if (random_number >= 0 && random_number < 52 && mark[random_number] == 0) {
+                            break;
+                        }
+
+                        if (++attempts > 100) {
+                            while (mark[random_number] != 0) {
+                                random_number = dist(gen);
+                            }
+                            break;
+                        }
+                    } while (true);
+                } else { 
+                    // Random card for variety
+                    do {
+                        random_number = dist(gen);
+                    } while (mark[random_number] != 0);
+                }
+            }
+
+            // Mark card as used
+            mark[random_number] = 1;
+            players[i].card_id[j] = random_number;
+
+            // Map card_id to rank and suit
+            int rankIndex = random_number / 4;
+            int suitIndex = random_number % 4;
+            players[i].cards[j].rank = static_cast<Cards::Rank>(rankIndex);
+            players[i].cards[j].suit = static_cast<Cards::Suit>(suitIndex);
+
+            // Update counts
+            suitCount[suitIndex]++;
+            rankCount[rankIndex]++;
+        }
+    }
+
+    // Debugging output
+    // for (const auto& player : players) {
+    //     std::cout << "Player: " << player.username << "\n";
+    //     for (const auto& card : player.cards) {
+    //         std::cout << "  " << card.rank << " of " << card.suit << "\n";
+    //     }
+    // }
+}
+

@@ -1,5 +1,6 @@
 #include "functions.h"
 #include "Poker/Poker.h"
+#include "Baccarat/Baccarat.h"
 /*
 Status numbers:
 -1: Loading screen
@@ -17,7 +18,7 @@ Status numbers:
 /*
 Gameplay status numbers:
 1: Poker
-2: Big Two
+2: Black Jack
 3: Baccarat
 */
 
@@ -510,7 +511,8 @@ int main(int argc, char*argv[]) {
     bool Load = false;
     short playerAmount = 0;
     std::vector<Players> players;
-     std::vector<Players> sorted_players;
+    std::vector<Players> sorted_players;
+    std::vector<Baccarat_Players> baccarat_players;
     std::vector<int> winners;
     while (!quit) {
         int mouseX, mouseY;
@@ -668,7 +670,8 @@ int main(int argc, char*argv[]) {
                         else {
                             wrongAnswer = false;
                             playerAmount = nums;
-                            players.resize(playerAmount);
+                            if (game_status == 1) players.resize(playerAmount);
+                            else if (game_status == 3) baccarat_players.resize(playerAmount);
                             if (!isPVP) {
                                 for (int i = 1; i < playerAmount; i++) {
                                     players[i].username = "Bot " + std::to_string(i);
@@ -684,7 +687,8 @@ int main(int argc, char*argv[]) {
                         status = 4;
                         plrIdSwitch = 0;
                         wrongAnswer = false;
-                        clearAllPlayerName(players, playerAmount);
+                        if (game_status == 1) clearAllPlayerName(players, playerAmount);
+                        else if (game_status == 3) clearAllBaccaratPlayerName(baccarat_players, playerAmount);
                     }
                     if (isMouseInside(inputUsernameBox, mouseX, mouseY) && !inputActive) {
                         inputActive = true;
@@ -695,8 +699,11 @@ int main(int argc, char*argv[]) {
                     }
                     if (isMouseInside(confirm_Rect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
-                        if (inputUsernameText != "Enter here" && inputUsernameText != "" && !alreadyUsedName(players, inputUsernameText, playerAmount, plrIdSwitch)) {
-                            players[plrIdSwitch++].username = inputUsernameText;
+                        bool alreadyUsedNameCheck = (game_status == 1) ? alreadyUsedName(players, inputUsernameText, playerAmount, plrIdSwitch) : BaccaratAlreadyUsedName(baccarat_players, inputUsernameText, playerAmount, plrIdSwitch);
+                        if (inputUsernameText != "Enter here" && inputUsernameText != "" && !alreadyUsedNameCheck) {
+                            
+                            if (game_status == 1) players[plrIdSwitch++].username = inputUsernameText;
+                            else if (game_status == 3) baccarat_players[plrIdSwitch++].username = inputUsernameText;
                             wrongAnswer = 0;
                             if (plrIdSwitch >= playerAmount && isPVP || !isPVP && plrIdSwitch <= 1) {
                                 status = 6;
@@ -714,58 +721,93 @@ int main(int argc, char*argv[]) {
                         }
                     }
                 }
-                else if (status == 6 && game_status == 1) {
-                    if (isMouseInside(cardRect1, mouseX, mouseY) && !players[plrIdSwitch].openingCards[0]) {
-                        players[plrIdSwitch].openingCards[0] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                else if (status == 6) {
+                    if (game_status == 1) {
+                        if (isMouseInside(cardRect1, mouseX, mouseY) && !players[plrIdSwitch].openingCards[0]) {
+                            players[plrIdSwitch].openingCards[0] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect2, mouseX, mouseY) && !players[plrIdSwitch].openingCards[1]) {
+                            players[plrIdSwitch].openingCards[1] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect3, mouseX, mouseY) && !players[plrIdSwitch].openingCards[2]) {
+                            players[plrIdSwitch].openingCards[2] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect4, mouseX, mouseY) && !players[plrIdSwitch].openingCards[3]) {
+                            players[plrIdSwitch].openingCards[3] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect5, mouseX, mouseY) && !players[plrIdSwitch].openingCards[4]) {
+                            players[plrIdSwitch].openingCards[4] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(flipAll_buttonRect, mouseX, mouseY)) {
+                            players[plrIdSwitch].openingCards[0] = 1;
+                            players[plrIdSwitch].openingCards[1] = 1;
+                            players[plrIdSwitch].openingCards[2] = 1;
+                            players[plrIdSwitch].openingCards[3] = 1;
+                            players[plrIdSwitch].openingCards[4] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (!(players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0) && isMouseInside(backButton_Rect, mouseX, mouseY)) {
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                            if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
+                            else {
+                                battles++;
+                                for (auto& player : players) {
+                                    player.handStrength = evaluateHandStrength(player.cards);
+                                }
+                                winners = findWinner(players);
+                                for (int winner : winners) {
+                                    std::cout << "Battle " << battles << "Winner: " << players[winner].username << " with hand " << players[winner].handStrength << "\n";
+                                    players[winner].wins++;
+                            
+                                    updateStrategy(winner, players);
+                                }
+                                findFavoriteStrategy(players);
+                                for (auto& player : players) {
+                                    player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
+                                }
+                                sorted_players = players;
+                                sort(sorted_players.begin(), sorted_players.end(), cmp);
+                                status = 7;
+                            } 
+                        }
                     }
-                    else if (isMouseInside(cardRect2, mouseX, mouseY) && !players[plrIdSwitch].openingCards[1]) {
-                        players[plrIdSwitch].openingCards[1] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
-                    }
-                    else if (isMouseInside(cardRect3, mouseX, mouseY) && !players[plrIdSwitch].openingCards[2]) {
-                        players[plrIdSwitch].openingCards[2] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
-                    }
-                    else if (isMouseInside(cardRect4, mouseX, mouseY) && !players[plrIdSwitch].openingCards[3]) {
-                        players[plrIdSwitch].openingCards[3] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
-                    }
-                    else if (isMouseInside(cardRect5, mouseX, mouseY) && !players[plrIdSwitch].openingCards[4]) {
-                        players[plrIdSwitch].openingCards[4] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
-                    }
-                    else if (isMouseInside(flipAll_buttonRect, mouseX, mouseY)) {
-                        players[plrIdSwitch].openingCards[0] = 1;
-                        players[plrIdSwitch].openingCards[1] = 1;
-                        players[plrIdSwitch].openingCards[2] = 1;
-                        players[plrIdSwitch].openingCards[3] = 1;
-                        players[plrIdSwitch].openingCards[4] = 1;
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
-                    }
-                    else if (!(players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0) && isMouseInside(backButton_Rect, mouseX, mouseY)) {
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
-                        if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
-                        else {
-                            battles++;
-                            for (auto& player : players) {
-                                player.handStrength = evaluateHandStrength(player.cards);
-                            }
-                            winners = findWinner(players);
-                            for (int winner : winners) {
-                                std::cout << "Battle " << battles << "Winner: " << players[winner].username << " with hand " << players[winner].handStrength << "\n";
-                                players[winner].wins++;
+                    else if (game_status == 3) {
+                        if (isMouseInside(cardRect2, mouseX, mouseY) && !baccarat_players[plrIdSwitch].openingCards[0]) {
+                            baccarat_players[plrIdSwitch].openingCards[0] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect3, mouseX, mouseY) && !baccarat_players[plrIdSwitch].openingCards[1]) {
+                            baccarat_players[plrIdSwitch].openingCards[1] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(cardRect4, mouseX, mouseY) && !baccarat_players[plrIdSwitch].openingCards[2]) {
+                            baccarat_players[plrIdSwitch].openingCards[2] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (isMouseInside(flipAll_buttonRect, mouseX, mouseY)) {
+                            baccarat_players[plrIdSwitch].openingCards[0] = 1;
+                            baccarat_players[plrIdSwitch].openingCards[1] = 1;
+                            baccarat_players[plrIdSwitch].openingCards[2] = 1;
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, flipcard, 0);
+                        }
+                        else if (!(baccarat_players[plrIdSwitch].openingCards[0] == 0 || baccarat_players[plrIdSwitch].openingCards[1] == 0 || baccarat_players[plrIdSwitch].openingCards[2] == 0) && isMouseInside(backButton_Rect, mouseX, mouseY)) {
+                            if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                            if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
+                            else {
                         
-                                updateStrategy(winner, players);
-                            }
-                            findFavoriteStrategy(players);
-                            for (auto& player : players) {
-                                player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
-                            }
-                            sorted_players = players;
-                            sort(sorted_players.begin(), sorted_players.end(), cmp);
-                            status = 7;
-                        } 
+                                winners = findWinner(players);
+                            
+                                for (auto& player : baccarat_players) {
+                                    player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
+                                }
+                                status = 7;
+                            } 
+                        }
                     }
                 }
                 else if (status == 7) {
@@ -781,6 +823,7 @@ int main(int argc, char*argv[]) {
                     if (isMouseInside(backButton_Rect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         if (isPlayingMusic) Mix_PlayMusic(backgroundMusic, -1);
+                        battles = 0;
                         playerAmount = game_status = status = scrollOffset = plrIdSwitch = leaderBoardScrollOffset = 0;
                         isPlaying = Load = wasHovering = wrongAnswer = isPVP = false;
                         players.resize(playerAmount);
@@ -901,21 +944,43 @@ int main(int argc, char*argv[]) {
         }
         else if (status == 6) {
             if (!Load) {
-                battles = 0;
-                Poker(players, playerAmount);
+                if (game_status == 1) {
+                    if (isPVP) Poker(players, playerAmount);
+                    else PVE_Poker(players, playerAmount);
+                }
+                else if (game_status == 3) {
+                    if (isPVP) Baccarat(baccarat_players, playerAmount);
+                }
                 Load = true;
             }
             else {
-                SDL_RenderCopy(renderer, yourCards_Texture, nullptr, &yourCardsRect);
-                SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[0] != 0) ? cardTextures[players[plrIdSwitch].card_id[0]] : cardTextures[52], nullptr, &cardRect1);
-                SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[1] != 0) ? cardTextures[players[plrIdSwitch].card_id[1]] : cardTextures[52], nullptr, &cardRect2);
-                SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect3);
-                SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[3] != 0) ? cardTextures[players[plrIdSwitch].card_id[3]] : cardTextures[52], nullptr, &cardRect4);
-                SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[4] != 0) ? cardTextures[players[plrIdSwitch].card_id[4]] : cardTextures[52], nullptr, &cardRect5);
-                if (players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0)
-                    SDL_RenderCopy(renderer, flipAll_Texture, nullptr, isMouseInside(flipAll_buttonRect, mouseX, mouseY) ? &flipAll_hoverRect : &flipAll_buttonRect);
-                else 
-                    SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
+                if (game_status == 1) {
+                    if (!isPVP) SDL_RenderCopy(renderer, yourCards_Texture, nullptr, &yourCardsRect);
+                    else {
+                        std::string tmp = players[plrIdSwitch].username + "'s cards:";
+                        SDL_Texture* plrTurn = renderText(tmp, SuperPixel_font, whiteColor, renderer);
+                        SDL_Rect text_Rect = {400-players[plrIdSwitch].username.length()*14, 100 , 450+players[plrIdSwitch].username.length()*22, 100}; 
+                        SDL_RenderCopy(renderer, plrTurn, nullptr, &text_Rect);
+                    }
+                    SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[0] != 0) ? cardTextures[players[plrIdSwitch].card_id[0]] : cardTextures[52], nullptr, &cardRect1);
+                    SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[1] != 0) ? cardTextures[players[plrIdSwitch].card_id[1]] : cardTextures[52], nullptr, &cardRect2);
+                    SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect3);
+                    SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[3] != 0) ? cardTextures[players[plrIdSwitch].card_id[3]] : cardTextures[52], nullptr, &cardRect4);
+                    SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[4] != 0) ? cardTextures[players[plrIdSwitch].card_id[4]] : cardTextures[52], nullptr, &cardRect5);
+                    if (players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0)
+                        SDL_RenderCopy(renderer, flipAll_Texture, nullptr, isMouseInside(flipAll_buttonRect, mouseX, mouseY) ? &flipAll_hoverRect : &flipAll_buttonRect);
+                    else 
+                        SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
+                }
+                else if (game_status == 3) {
+                    SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[0] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[0]] : cardTextures[52], nullptr, &cardRect2);
+                    SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[1] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[1]] : cardTextures[52], nullptr, &cardRect3);
+                    SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect4);
+                    if (baccarat_players[plrIdSwitch].openingCards[0] == 0 || baccarat_players[plrIdSwitch].openingCards[1] == 0 || baccarat_players[plrIdSwitch].openingCards[2] == 0)
+                        SDL_RenderCopy(renderer, flipAll_Texture, nullptr, isMouseInside(flipAll_buttonRect, mouseX, mouseY) ? &flipAll_hoverRect : &flipAll_buttonRect);
+                    else 
+                        SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
+                }
             }
         }
         else if (status == 7) {
