@@ -94,14 +94,12 @@ void renderLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollO
     SDL_Color textColor = { 255, 255, 255, 255 };
     SDL_Color winnerColor = { 255, 255, 0, 255 };
 
-    // Use a set for faster winner checks
     std::unordered_set<int> winners(winners_idx.begin(), winners_idx.end());
 
     SDL_Rect textRect, crownRect;
     for (int i = 0; i < playerAmount; ++i) {
         int y = 200 + i * lineHeight - scrollOffset;
 
-        // Skip players entirely outside the viewport
         if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
             continue;
         }
@@ -119,7 +117,7 @@ void renderLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollO
             SDL_FreeSurface(rankSurface);
             SDL_DestroyTexture(rankTexture);
         } else {
-            // Render crown for top 1
+            // Render crown cho winner
             crownRect = { 85, y - 5, 65, 50 };
             SDL_RenderCopy(renderer, top1Crown, nullptr, &crownRect);
         }
@@ -180,7 +178,7 @@ void clearAllPlayerName(std::vector<Players> players, int playerAmount) {
 }
 
 std::string evaluateHandStrength(const Cards cards[5]) {
-    // Sort cards by rank
+    // Sort cards
     std::array<int, 5> ranks;
     std::array<int, 5> suits;
     for (int i = 0; i < 5; i++) {
@@ -191,7 +189,7 @@ std::string evaluateHandStrength(const Cards cards[5]) {
     // Sort ranks
     std::sort(ranks.begin(), ranks.end());
 
-    // Count ranks and suits
+    // đếm ranks and suits
     std::map<int, int> rankCount;
     std::map<int, int> suitCount;
     for (int i = 0; i < 5; i++) {
@@ -202,18 +200,17 @@ std::string evaluateHandStrength(const Cards cards[5]) {
     bool isFlush = (suitCount.size() == 1); // All cards have the same suit
     bool isStraight = (ranks[4] - ranks[0] == 4) && (rankCount.size() == 5);
 
-    // Special case: Ace-low straight (A, 2, 3, 4, 5)
+    // Truong hop dac biet: Ace-low straight (A, 2, 3, 4, 5)
     if (rankCount.size() == 5 && ranks[4] == Cards::ACE && ranks[0] == Cards::TWO &&
         ranks[1] == Cards::THREE && ranks[2] == Cards::FOUR && ranks[3] == Cards::FIVE) {
         isStraight = true;
     }
 
-    // Check for combinations
+    // check card strength của player
     if (isStraight && isFlush) {
         return "Straight Flush";
     }
     if (rankCount.size() == 2) {
-        // Either Four of a Kind or Full House
         for (const auto& [rank, count] : rankCount) {
             if (count == 4) return "Four of a Kind";
         }
@@ -226,7 +223,6 @@ std::string evaluateHandStrength(const Cards cards[5]) {
         return "Straight";
     }
     if (rankCount.size() == 3) {
-        // Either Three of a Kind or Two Pair
         for (const auto& [rank, count] : rankCount) {
             if (count == 3) return "Three of a Kind";
         }
@@ -239,7 +235,7 @@ std::string evaluateHandStrength(const Cards cards[5]) {
 }
 
 int handRank(const std::string& handStrength) {
-    // Assign numerical values to hand strengths
+    // Gía trị của các hand strength để so sánh
     if (handStrength == "Straight Flush") return 9;
     if (handStrength == "Four of a Kind") return 8;
     if (handStrength == "Full House") return 7;
@@ -252,6 +248,7 @@ int handRank(const std::string& handStrength) {
 }
 
 void updateStrategy(int plr_idx, std::vector<Players> &players) {
+    // update số lần strategy của player
     if (players[plr_idx].handStrength == "Straight Flush") players[plr_idx].Straight_flush++;
     else if (players[plr_idx].handStrength == "Four of a Kind") players[plr_idx].Four_of_a_kind++;
     else if (players[plr_idx].handStrength == "Full House") players[plr_idx].Full_house++;
@@ -265,7 +262,6 @@ void updateStrategy(int plr_idx, std::vector<Players> &players) {
 
 void findFavoriteStrategy(std::vector<Players> &players) {
     for (auto& player : players) {
-    // Create a vector of pairs to represent strategy types and their priorities
     std::vector<std::pair<int, std::string>> strategies = {
         {player.Straight_flush, "Straight Flush"},
         {player.Four_of_a_kind, "Four of a Kind"},
@@ -278,7 +274,7 @@ void findFavoriteStrategy(std::vector<Players> &players) {
         {player.High_card, "High Card"}
     };
 
-    // Find the strategy with the highest priority (ties resolved by order)
+    // Tìm strategy
     auto best_strategy = std::max_element(
         strategies.begin(),
         strategies.end(),
@@ -287,37 +283,36 @@ void findFavoriteStrategy(std::vector<Players> &players) {
         }
     );
 
-    // If no valid strategy (all zero), skip this player
+    // nếu không có strategy thì skip player này
     if (best_strategy->first == 0) continue;
 
-    // Assign the favorite strategy
+
     player.favorite_strategy = best_strategy->second;
     }
 }
 
 bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string& strength1, const std::string& strength2) {
-      int rank1 = handRank(strength1);
+    int rank1 = handRank(strength1);
     int rank2 = handRank(strength2);
     if (rank1 != rank2) return rank1 > rank2;
 
-    // Tie-breaking logic for specific hand strengths
     std::array<int, 5> ranks1, ranks2;
     for (int i = 0; i < 5; ++i) {
         ranks1[i] = hand1[i].rank;
         ranks2[i] = hand2[i].rank;
     }
 
-    // Sort ranks in descending order
+    //sort rank
     std::sort(ranks1.rbegin(), ranks1.rend());
     std::sort(ranks2.rbegin(), ranks2.rend());
-
+    
+    // So sánh hand strength
     if (strength1 == "Straight Flush" || strength1 == "Straight") {
-        // Compare the highest card in the straight
+        // So sánh card mạnh nhất trong sảnh
         return ranks1[0] > ranks2[0];
     }
 
     if (strength1 == "Four of a Kind") {
-        // Compare the four cards, then the kicker
         int four1 = -1, four2 = -1, kicker1 = -1, kicker2 = -1;
         for (int r : ranks1) {
             if (std::count(ranks1.begin(), ranks1.end(), r) == 4) four1 = r;
@@ -332,7 +327,6 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     }
 
     if (strength1 == "Full House") {
-        // Compare the three cards, then the pair
         int three1 = -1, three2 = -1, pair1 = -1, pair2 = -1;
         for (int r : ranks1) {
             if (std::count(ranks1.begin(), ranks1.end(), r) == 3) three1 = r;
@@ -347,14 +341,12 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     }
 
     if (strength1 == "Flush") {
-        // Compare cards one by one in descending order
         for (int i = 0; i < 5; ++i) {
             if (ranks1[i] != ranks2[i]) return ranks1[i] > ranks2[i];
         }
     }
 
     if (strength1 == "Three of a Kind") {
-        // Compare the three cards, then the kickers
         int three1 = -1, three2 = -1;
         std::vector<int> kickers1, kickers2;
         for (int r : ranks1) {
@@ -374,7 +366,6 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     }
 
     if (strength1 == "Two Pair") {
-        // Compare the pairs, then the kicker
         std::vector<int> pairs1, pairs2;
         int kicker1 = -1, kicker2 = -1;
         for (int r : ranks1) {
@@ -394,7 +385,6 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     }
 
     if (strength1 == "One Pair") {
-        // Compare the pair, then the kickers
         int pair1 = -1, pair2 = -1;
         std::vector<int> kickers1, kickers2;
         for (int r : ranks1) {
@@ -414,13 +404,12 @@ bool compareHands(const Cards hand1[5], const Cards hand2[5], const std::string&
     }
 
     if (strength1 == "High Card") {
-        // Compare cards one by one in descending order
         for (int i = 0; i < 5; ++i) {
             if (ranks1[i] != ranks2[i]) return ranks1[i] > ranks2[i];
         }
     }
 
-    // If everything is the same, return false (tie)
+    // Nếu tất cả giống nhau thì return hòa (false)
     return false;
 }
 
@@ -436,28 +425,26 @@ std::vector<int> findWinner(const std::vector<Players>& players) {
 
         if (bestPlayerIndex == -1 || 
             compareHands(player.cards, bestHand, handStrength, bestHandStrength)) {
-            // New best player found
             bestPlayerIndex = i;
             bestHandStrength = handStrength;
             bestHand = player.cards;
             winners = {static_cast<int>(i)};
         } else if (handRank(handStrength) == handRank(bestHandStrength) &&
                    !compareHands(bestHand, player.cards, bestHandStrength, handStrength)) {
-            // Tie
+            //Khi có nhiều hơn 1 player
             winners.push_back(i);
         }
     }
 
-    return winners; // Return indices of the winner(s)
+    return winners; //return index của player trong mảng Players
 }
 
 void Poker(std::vector<Players> &players, int playerAmount) {
-    // Initialize random number generator
     int mark[52] = {0};
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 51);
-    // Assign random cards to players
+    // Random cards cho players
     for (int i = 0; i < playerAmount; i++) {
         for (int j = 0; j < 5; j++) {
             int random_number;
@@ -465,10 +452,10 @@ void Poker(std::vector<Players> &players, int playerAmount) {
                 random_number = dist(gen);
             } while (mark[random_number] != 0);
 
-            mark[random_number] = 1; // sMark card as used
+            mark[random_number] = 1; //đánh dấu là bài đã phát
             players[i].card_id[j] = random_number;
 
-            // Map card_id to rank and suit
+            //Tìm lá bài tương ứng với random_number
             int rankIndex = random_number / 4;
             int suitIndex = random_number % 4;
             players[i].cards[j].rank = static_cast<Cards::Rank>(rankIndex);
@@ -476,17 +463,10 @@ void Poker(std::vector<Players> &players, int playerAmount) {
         }
     }
 
-    // Print cards for debugging
-    // for (const auto& player : players) {
-    //     std::cout << "Player: " << player.username << "\n";
-    //     for (const auto& card : player.cards) {
-    //         std::cout << "  " << card.rank << " of " << card.suit << "\n";
-    //     }
-    // }
-
 }
+
+// Chat gpt helped me to make player have lower chance to win:
 void PVE_Poker(std::vector<Players> &players, int playerAmount) {
-    // Initialize random number generator
     int mark[52] = {0};
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -579,13 +559,5 @@ void PVE_Poker(std::vector<Players> &players, int playerAmount) {
             rankCount[rankIndex]++;
         }
     }
-
-    // Debugging output
-    // for (const auto& player : players) {
-    //     std::cout << "Player: " << player.username << "\n";
-    //     for (const auto& card : player.cards) {
-    //         std::cout << "  " << card.rank << " of " << card.suit << "\n";
-    //     }
-    // }
 }
 

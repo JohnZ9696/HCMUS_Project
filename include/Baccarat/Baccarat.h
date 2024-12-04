@@ -19,7 +19,7 @@ bool BaccaratAlreadyUsedName (std::vector<Baccarat_Players> &players, std::strin
 void renderBaccaratResultBoard(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Baccarat_Players> players, int playerAmount, int cardAmount, SDL_Texture* cardTextures[], std::vector<int> winners_idx) {
     int lineHeight = 125;   
 
-    // Clip content to the frame's area
+    // Size của scroll frame
     SDL_Rect viewport = { 70, 140, 1090, 470 };
     SDL_RenderSetClipRect(renderer, &viewport);
 
@@ -30,14 +30,12 @@ void renderBaccaratResultBoard(SDL_Renderer* renderer, TTF_Font* font, int scrol
     SDL_Color textColor = { 255, 255, 255, 255 };
     SDL_Color winnerColor = { 255, 255, 0, 255 };
 
-    // Use a set for faster winner checks
     std::unordered_set<int> winners(winners_idx.begin(), winners_idx.end());
 
     SDL_Rect textRect, cardRect, handStrengthRect;
     for (int i = 0; i < playerAmount; ++i) {
         int y = 170 + i * lineHeight - scrollOffset;
 
-        // Skip players outside the viewport
         if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
             continue;
         }
@@ -67,7 +65,7 @@ void renderBaccaratResultBoard(SDL_Renderer* renderer, TTF_Font* font, int scrol
         handStrengthRect = { cardRect.x + 90, y, handStrengthSurface->w - static_cast<int>(handStrength.length()*3+text.length()*3-2)+30, handStrengthSurface->h};
         SDL_RenderCopy(renderer, handStrengthTexture, nullptr, &handStrengthRect);
 
-        // Free resources
+        // giải phóng memory
         SDL_FreeSurface(textSurface);
         SDL_DestroyTexture(textTexture);
         SDL_FreeSurface(handStrengthSurface);
@@ -79,12 +77,13 @@ void renderBaccaratResultBoard(SDL_Renderer* renderer, TTF_Font* font, int scrol
 
 bool Baccarat_cmp(const Baccarat_Players& a, const Baccarat_Players& b) {
     return a.wins > b.wins;
+    //sort theo số lần win
 }
 
 void renderBaccaratLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Baccarat_Players> players, int playerAmount, std::vector<int> winners_idx, SDL_Texture* top1Crown) {
     int lineHeight = 70;
 
-    // Clip content to the frame's area
+    // size của scroll frame
     SDL_Rect viewport = { 70, 200, 1100, 400 };
     SDL_RenderSetClipRect(renderer, &viewport);
 
@@ -95,14 +94,12 @@ void renderBaccaratLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int
     SDL_Color textColor = { 255, 255, 255, 255 };
     SDL_Color winnerColor = { 255, 255, 0, 255 };
 
-    // Use a set for faster winner checks
     std::unordered_set<int> winners(winners_idx.begin(), winners_idx.end());
 
     SDL_Rect textRect, crownRect;
     for (int i = 0; i < playerAmount; ++i) {
         int y = 200 + i * lineHeight - scrollOffset;
 
-        // Skip players entirely outside the viewport
         if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
             continue;
         }
@@ -176,20 +173,20 @@ int calculateScore(Baccarat_Players& player, int cardCount) {
         score += rankValue;
         ranks.push_back(player.cards[i].rank);
 
-        // Check for "Ba Tay" (three face cards)
+        // check nếu bài của player là ba tây
         if (player.cards[i].rank == Baccarat_Cards::JACK || 
             player.cards[i].rank == Baccarat_Cards::QUEEN || 
             player.cards[i].rank == Baccarat_Cards::KING) {
             ba_tay++;
         }
 
-        // Check for "Sap" (all cards with the same rank)
+        // check nếu là sáp
         if (i > 0 && player.cards[i].rank != player.cards[i - 1].rank) {
             sap = false;
         }
     }
 
-    // Check for "Lieng" (three consecutive ranks)
+    // check nếu là liêng
     std::sort(ranks.begin(), ranks.end());
     if ((ranks[2] - ranks[1] == 1 && ranks[1] - ranks[0] == 1) ||  // Straight sequence
         (ranks[0] == Baccarat_Cards::ACE && ranks[1] == Baccarat_Cards::TWO && ranks[2] == Baccarat_Cards::KING)) {  // Wrap-around (K-A-2)
@@ -209,7 +206,7 @@ int calculateScore(Baccarat_Players& player, int cardCount) {
         player.handType = "Regular";
     }
 
-    return score % 10; // Only keep the last digit for regular scoring
+    return score % 10; // chỉ lấy hàng đơn vị
 }
 void updateHandtype(int plr_idx, std::vector<Baccarat_Players>& players) {
     if (players[plr_idx].handType == "Regular") players[plr_idx].regular++;
@@ -218,7 +215,7 @@ void updateHandtype(int plr_idx, std::vector<Baccarat_Players>& players) {
     else if (players[plr_idx].handType == "Ba Tay") players[plr_idx].ba_tay++;
 }
 
-// Determine the most common hand type for a player
+// Tìm ra favorite handtype 
 std::string getMostFrequentHandType(const Baccarat_Players& player) {
     int maxCount = player.regular;
     std::string mostFrequent = "Regular";
@@ -239,24 +236,23 @@ std::string getMostFrequentHandType(const Baccarat_Players& player) {
     return mostFrequent;
 }
 
-// Updated determineWinner
 void determineWinner(std::vector<Baccarat_Players>& players, std::vector<int>& winners) {
     int highestScore = -1;
     winners.resize(0);
-    // Find the highest score
+    // tìm điểm cao nhất
     for (const auto& player : players) {
         if (player.score > highestScore) {
             highestScore = player.score;
         }
     }
-    // Collect winners based on score
+    // tìm player có số điểm bằng highest score
     for (int i = 0; i < players.size(); ++i) {
         if (players[i].score == highestScore) {
             winners.push_back(i);
         }
     }
 
-    // Update winners' hand types and win counts
+    // Update hand type và wins của winner 
     for (const auto& winner : winners) {
         players[winner].wins += 1;
         updateHandtype(winner, players);
@@ -266,21 +262,20 @@ void determineWinner(std::vector<Baccarat_Players>& players, std::vector<int>& w
 void sortWinner(std::vector<Baccarat_Players> players, std::vector<int>& winners) {
     int highestScore = -1;
     winners.resize(0);
-    // Find the highest score
     for (const auto& player : players) {
         if (player.score > highestScore) {
             highestScore = player.score;
         }
     }
-
-    // Collect winners based on score
+    //sort winner theo thứ tự để hiển thị trong leaderboard
     for (int i = 0; i < players.size(); ++i) {
         if (players[i].score == highestScore) {
             winners.push_back(i);
         }
     }
 }
-// Fixed Baccarat function
+
+//Chat gpt helped me to make player have lower chance to win against bots
 void PVE_Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
     // Initialize random number generator
     int mark[52] = {0};
