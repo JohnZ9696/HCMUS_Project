@@ -5,7 +5,7 @@
 
 struct Baccarat_Cards {
     enum Suit { CLUBS, DIAMONDS, HEARTS, SPADES } suit;
-    enum Rank { TWO = 2, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE } rank;
+    enum Rank { ACE = 1, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING } rank;
 };
 
 #endif

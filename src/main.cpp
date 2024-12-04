@@ -513,7 +513,9 @@ int main(int argc, char*argv[]) {
     std::vector<Players> players;
     std::vector<Players> sorted_players;
     std::vector<Baccarat_Players> baccarat_players;
+    std::vector<Baccarat_Players> sorted_baccarat_players;
     std::vector<int> winners;
+    std::vector<int> sorted_winners;
     while (!quit) {
         int mouseX, mouseY;
         bool isHovering;
@@ -673,8 +675,15 @@ int main(int argc, char*argv[]) {
                             if (game_status == 1) players.resize(playerAmount);
                             else if (game_status == 3) baccarat_players.resize(playerAmount);
                             if (!isPVP) {
-                                for (int i = 1; i < playerAmount; i++) {
-                                    players[i].username = "Bot " + std::to_string(i);
+                                if (game_status == 1) {
+                                    for (int i = 1; i < playerAmount; i++) {
+                                        players[i].username = "Bot " + std::to_string(i);
+                                    }
+                                }
+                                else if (game_status == 3) {
+                                    for (int i = 1; i < playerAmount; i++) {
+                                        baccarat_players[i].username = "Bot " + std::to_string(i);
+                                    }
                                 }
                             }
                             status = 5;
@@ -755,7 +764,6 @@ int main(int argc, char*argv[]) {
                             if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                             if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
                             else {
-                                battles++;
                                 for (auto& player : players) {
                                     player.handStrength = evaluateHandStrength(player.cards);
                                 }
@@ -771,7 +779,8 @@ int main(int argc, char*argv[]) {
                                     player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
                                 }
                                 sorted_players = players;
-                                sort(sorted_players.begin(), sorted_players.end(), cmp);
+                                sort(sorted_players.begin(), sorted_players.end(), Poker_cmp);
+                                sorted_winners = findWinner(sorted_players);
                                 status = 7;
                             } 
                         }
@@ -800,11 +809,14 @@ int main(int argc, char*argv[]) {
                             if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
                             else {
                         
-                                winners = findWinner(players);
+                                determineWinner(baccarat_players, winners);
                             
                                 for (auto& player : baccarat_players) {
                                     player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
                                 }
+                                sorted_baccarat_players = baccarat_players;
+                                sort(sorted_baccarat_players.begin(), sorted_baccarat_players.end(), Baccarat_cmp);
+                                sortWinner(sorted_baccarat_players, sorted_winners);
                                 status = 7;
                             } 
                         }
@@ -827,6 +839,7 @@ int main(int argc, char*argv[]) {
                         playerAmount = game_status = status = scrollOffset = plrIdSwitch = leaderBoardScrollOffset = 0;
                         isPlaying = Load = wasHovering = wrongAnswer = isPVP = false;
                         players.resize(playerAmount);
+                        baccarat_players.resize(playerAmount);
                         winners.resize(playerAmount);
                     }
                     else if (isMouseInside(playAgainButton_Rect, mouseX, mouseY)) {
@@ -838,6 +851,11 @@ int main(int argc, char*argv[]) {
                             player.openingCards[2] = 0;
                             player.openingCards[3] = 0;
                             player.openingCards[4] = 0;
+                        }
+                        for (auto& player : baccarat_players) {
+                            player.openingCards[0] = 0;
+                            player.openingCards[1] = 0;
+                            player.openingCards[2] = 0;
                         }
                         scrollOffset = plrIdSwitch = leaderBoardScrollOffset = 0;
                         Load = false;
@@ -950,18 +968,21 @@ int main(int argc, char*argv[]) {
                 }
                 else if (game_status == 3) {
                     if (isPVP) Baccarat(baccarat_players, playerAmount);
+                    else PVE_Baccarat(baccarat_players, playerAmount);
                 }
+                battles++;
                 Load = true;
             }
             else {
+                if (!isPVP) SDL_RenderCopy(renderer, yourCards_Texture, nullptr, &yourCardsRect);
+                else {
+                    std::string tmp = (game_status == 1) ? players[plrIdSwitch].username + "'s cards:" : baccarat_players[plrIdSwitch].username + "'s cards:";
+                    SDL_Texture* plrTurn = renderText(tmp, SuperPixel_font, whiteColor, renderer);
+                    short length = (game_status == 1) ? players[plrIdSwitch].username.length() : baccarat_players[plrIdSwitch].username.length();
+                    SDL_Rect text_Rect = {400-length*14, 100 , 450+length*22, 100}; 
+                    SDL_RenderCopy(renderer, plrTurn, nullptr, &text_Rect);
+                }
                 if (game_status == 1) {
-                    if (!isPVP) SDL_RenderCopy(renderer, yourCards_Texture, nullptr, &yourCardsRect);
-                    else {
-                        std::string tmp = players[plrIdSwitch].username + "'s cards:";
-                        SDL_Texture* plrTurn = renderText(tmp, SuperPixel_font, whiteColor, renderer);
-                        SDL_Rect text_Rect = {400-players[plrIdSwitch].username.length()*14, 100 , 450+players[plrIdSwitch].username.length()*22, 100}; 
-                        SDL_RenderCopy(renderer, plrTurn, nullptr, &text_Rect);
-                    }
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[0] != 0) ? cardTextures[players[plrIdSwitch].card_id[0]] : cardTextures[52], nullptr, &cardRect1);
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[1] != 0) ? cardTextures[players[plrIdSwitch].card_id[1]] : cardTextures[52], nullptr, &cardRect2);
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect3);
@@ -987,35 +1008,63 @@ int main(int argc, char*argv[]) {
             SDL_Rect tmpHoverRect = {tmpRect.x-10 , tmpRect.y-10, tmpRect.w+20, tmpRect.h+20};
             SDL_RenderCopy(renderer, gameResultBoard_Texture, nullptr, &gameResultBoard_Rect);
             SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &tmpHoverRect : &tmpRect);
-            renderScrollableContent(renderer, SuperPixel_font, scrollOffset, players, playerAmount, 5, cardTextures, winners);
+            if (game_status == 1) renderPokerResultBoard(renderer, SuperPixel_font, scrollOffset, players, playerAmount, 5, cardTextures, winners);
+            else if (game_status == 3) renderBaccaratResultBoard(renderer, SuperPixel_font, scrollOffset, baccarat_players, playerAmount, 3, cardTextures, winners);
         }
         else if (status == 8) {
-            std::vector<int> sorted_winners = findWinner(sorted_players);
+            if (game_status == 1) {            
 
-            SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
-            renderLeaderBoardScroll(renderer, SuperPixel_font, leaderBoardScrollOffset, sorted_players, playerAmount, sorted_winners, top1crown_Texture);
-            SDL_Rect information_Rect = {80, 135, 85, 50};
-            SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
-            SDL_Texture* information_Texture = SDL_CreateTextureFromSurface(renderer, information);
-            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
-            information_Rect = {information_Rect.x + 120, information_Rect.y, 255, information_Rect.h};
-            information = TTF_RenderText_Solid(SuperPixel_font, "Player's Name", whiteColor);
-            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
-            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
-            information_Rect = {information_Rect.x + 300, information_Rect.y, 85, information_Rect.h};
-            information = TTF_RenderText_Solid(SuperPixel_font, "Wins", whiteColor);
-            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
-            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
-            information_Rect = {information_Rect.x + 130, information_Rect.y, 140, information_Rect.h};
-            information = TTF_RenderText_Solid(SuperPixel_font, "Winrate", whiteColor);
-            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
-            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
-            information_Rect = {information_Rect.x + 190, information_Rect.y, 340, information_Rect.h};
-            information = TTF_RenderText_Solid(SuperPixel_font, "Favorite Strategy", whiteColor);
-            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
-            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
-            SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &tmpHoverRect : &tmpRect);
-            SDL_RenderCopy(renderer, playAgainButton_Texture, nullptr, isMouseInside(playAgainButton_Rect, mouseX, mouseY) ? &playAgainButton_hoverRect : &playAgainButton_Rect);
+                SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
+                renderLeaderBoardScroll(renderer, SuperPixel_font, leaderBoardScrollOffset, sorted_players, playerAmount, sorted_winners, top1crown_Texture);
+                SDL_Rect information_Rect = {80, 135, 85, 50};
+                SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
+                SDL_Texture* information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 120, information_Rect.y, 255, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Player's Name", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 300, information_Rect.y, 85, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Wins", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 130, information_Rect.y, 140, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Winrate", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 190, information_Rect.y, 340, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Favorite Strategy", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &tmpHoverRect : &tmpRect);
+                SDL_RenderCopy(renderer, playAgainButton_Texture, nullptr, isMouseInside(playAgainButton_Rect, mouseX, mouseY) ? &playAgainButton_hoverRect : &playAgainButton_Rect);
+            }
+            else if (game_status == 3) {
+                SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
+                renderBaccaratLeaderBoardScroll(renderer, SuperPixel_font, leaderBoardScrollOffset, sorted_baccarat_players, playerAmount, sorted_winners, top1crown_Texture);
+                SDL_Rect information_Rect = {80, 135, 85, 50};
+                SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
+                SDL_Texture* information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 120, information_Rect.y, 255, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Player's Name", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 300, information_Rect.y, 85, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Wins", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 130, information_Rect.y, 140, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Winrate", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                information_Rect = {information_Rect.x + 190, information_Rect.y, 340, information_Rect.h};
+                information = TTF_RenderText_Solid(SuperPixel_font, "Favorite Strategy", whiteColor);
+                information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+                SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+                SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &tmpHoverRect : &tmpRect);
+                SDL_RenderCopy(renderer, playAgainButton_Texture, nullptr, isMouseInside(playAgainButton_Rect, mouseX, mouseY) ? &playAgainButton_hoverRect : &playAgainButton_Rect);
+            }
         }
         SDL_RenderPresent(renderer);
 

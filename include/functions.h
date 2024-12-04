@@ -11,6 +11,8 @@
 #define WIDTH 1200
 #define HEIGHT 680
 
+
+
 bool init(SDL_Window** window, SDL_Renderer** renderer); //Tao init
 
 void create_Window(SDL_Window*& window, SDL_Renderer*& renderer); //Tạo window

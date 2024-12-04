@@ -17,7 +17,7 @@ std::vector<int> findWinner(const std::vector<Players>& players);
 
 void Poker(std::vector<Players> &players, int playerAmount);
 
-void renderScrollableContent(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Players> players, int playerAmount, int cardAmount, SDL_Texture* cardTextures[], std::vector<int> winners_idx) {
+void renderPokerResultBoard(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Players> players, int playerAmount, int cardAmount, SDL_Texture* cardTextures[], std::vector<int> winners_idx) {
     int lineHeight = 125;   
 
     // Clip content to the frame's area
@@ -76,14 +76,14 @@ void renderScrollableContent(SDL_Renderer* renderer, TTF_Font* font, int scrollO
     SDL_RenderSetClipRect(renderer, nullptr);
 }
 
-bool cmp(const Players& a, const Players& b) {
-    return a.wins > b.wins; // Sort in descending order based on score
+bool Poker_cmp(const Players& a, const Players& b) {
+    return a.wins > b.wins;
 }
 
 void renderLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollOffset, std::vector<Players> players, int playerAmount, std::vector<int> winners_idx, SDL_Texture* top1Crown) {
     int lineHeight = 70;
 
-    // Clip content to the frame's area
+    // Size cua scroll frame
     SDL_Rect viewport = { 70, 200, 1100, 400 };
     SDL_RenderSetClipRect(renderer, &viewport);
 
@@ -111,7 +111,7 @@ void renderLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int scrollO
 
         // Render rank
         std::string rank = std::to_string(i + 1);
-        if (i > 0) {
+        if (players[i].wins < players[0].wins) {
             SDL_Surface* rankSurface = TTF_RenderText_Solid(font, rank.c_str(), currentColor);
             SDL_Texture* rankTexture = SDL_CreateTextureFromSurface(renderer, rankSurface);
             textRect = { 120 - static_cast<int>(rank.size()) * 15, y, rankSurface->w, rankSurface->h };
