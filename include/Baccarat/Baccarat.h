@@ -297,8 +297,7 @@ void Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
             players[i].cards[j].suit = static_cast<Baccarat_Cards::Suit>(suitIndex);
         }
     }
-
-    // Calculate scores and assign hand types
+    
     for (auto& player : players) {
         player.score = calculateScore(player, 3);
     }
