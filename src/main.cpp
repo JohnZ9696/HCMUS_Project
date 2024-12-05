@@ -1,6 +1,8 @@
 #include "functions.h"
 #include "Poker/Poker.h"
 #include "Baccarat/Baccarat.h"
+#include "Data.h"
+#include <fstream>
 /*
 Status numbers:
 -1: Loading screen
@@ -13,6 +15,7 @@ Status numbers:
 6: Flip cards
 7: Result board
 8: Leader Board
+9: Overall leaderboard
 */
 
 /*
@@ -22,8 +25,20 @@ Gameplay status numbers:
 3: Baccarat
 */
 
-
+void drawThickOutline(SDL_Renderer* renderer, SDL_Rect& rect, int thickness) {
+    // Vẽ outline dày bằng cách vẽ nhiều lớp cạnh
+    SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+    for (int i = 0; i < thickness; ++i) {
+        // Vẽ từng đường viền dày dần theo lớp
+        SDL_Rect outlineRect = {rect.x - i-2, rect.y - i-2, rect.w + 2 * i+4, rect.h + 2 * i+4};
+        SDL_RenderDrawRect(renderer, &outlineRect);
+    }
+}
 int main(int argc, char*argv[]) {
+    std::vector<Player_Data> players_data;
+
+    loadData(players_data);
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     if (TTF_Init() == -1) {
@@ -49,6 +64,7 @@ int main(int argc, char*argv[]) {
         return -1;
     }
 
+    
     //Loading
     TTF_Font* font = TTF_OpenFont("fonts/loading.ttf", 110); // Thay đường dẫn bằng file font của bạn
     if (font == nullptr) {
@@ -70,12 +86,13 @@ int main(int argc, char*argv[]) {
     SDL_QueryTexture(textTexture1, nullptr, nullptr, &textRect.w, &textRect.h); // Lấy kích thước của text
     
    //Poker 
+    int outlineThickness = 8;
     SDL_Rect cardRect1 = { 130, 250, 150, 250 };
     SDL_Rect cardRect2 = { 330, 250, 150, 250 };
     SDL_Rect cardRect3 = { 530, 250, 150, 250 };
     SDL_Rect cardRect4 = { 730, 250, 150, 250 };
     SDL_Rect cardRect5 = { 930, 250, 150, 250 };
-    
+
     SDL_Rect yourCardsRect = { 270, -130, 660, 580 }; 
     SDL_Texture* yourCards_Texture = loadTexture("image/yourcards.png", renderer);
     if (yourCards_Texture == nullptr) {
@@ -91,6 +108,15 @@ int main(int argc, char*argv[]) {
     if (flipAll_Texture == nullptr) {
         std::cerr << "Failed to load flipAll button texture!" << std::endl;
         close(window, renderer, flipAll_Texture, nullptr, nullptr, 1);
+        return -1;
+    }
+
+    SDL_Rect overallLeaderboard_Rect = { 20, 560, 100, 100 }; 
+    SDL_Rect overallLeaderboard_hoverRect = { overallLeaderboard_Rect.x - 10, overallLeaderboard_Rect.y - 10, overallLeaderboard_Rect.w + 20, overallLeaderboard_Rect.h + 20 };
+    SDL_Texture* overallLeaderboard_button = loadTexture("image/overallLeaderboard_button.png", renderer);
+    if (overallLeaderboard_button == nullptr) {
+        std::cerr << "Failed to load overallLeaderboard button texture!" << std::endl;
+        close(window, renderer, overallLeaderboard_button, nullptr, nullptr, 1);
         return -1;
     }
 
@@ -520,7 +546,7 @@ int main(int argc, char*argv[]) {
         int mouseX, mouseY;
         bool isHovering;
         if (status == 0) {
-            isHovering = isMouseInside(play_buttonRect, mouseX, mouseY) || isMouseInside(settings_buttonRect, mouseX, mouseY) || isMouseInside(exit_buttonRect, mouseX, mouseY);
+            isHovering = isMouseInside(play_buttonRect, mouseX, mouseY) || isMouseInside(settings_buttonRect, mouseX, mouseY) || isMouseInside(exit_buttonRect, mouseX, mouseY) || isMouseInside(overallLeaderboard_Rect, mouseX, mouseY);
         }
         else if (status == 1) {
             isHovering = isMouseInside(Poker_buttonRect, mouseX, mouseY) || isMouseInside(BigTwo_buttonRect, mouseX, mouseY) || isMouseInside(Baccarat_buttonRect, mouseX, mouseY);
@@ -582,6 +608,10 @@ int main(int argc, char*argv[]) {
                     else if (isMouseInside(settings_buttonRect, mouseX, mouseY)) {  //Nhấn settings button
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         status = 2;
+                    }
+                    else if (isMouseInside(overallLeaderboard_Rect, mouseX, mouseY)) {  //Nhấn settings button
+                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        status = 9;
                     }
                 }
                 else if (status == 1) {
@@ -863,6 +893,9 @@ int main(int argc, char*argv[]) {
                         
                     }
                 }
+                else if (status == 9) {
+                    
+                }
             }
             else if (e.type == SDL_TEXTINPUT && inputActive) {
                 if (status == 4 && inputText.length() <= 1 && *e.text.text >= '0' && *e.text.text <= '9') inputText += e.text.text;
@@ -891,6 +924,7 @@ int main(int argc, char*argv[]) {
             SDL_RenderCopy(renderer, play_buttonTexture, nullptr, isMouseInside(play_buttonRect, mouseX, mouseY) ? &play_hoverRect : &play_buttonRect);
             SDL_RenderCopy(renderer, settings_buttonTexture, nullptr, isMouseInside(settings_buttonRect, mouseX, mouseY) ? &settings_hoverRect : &settings_buttonRect);
             SDL_RenderCopy(renderer, exit_buttonTexture, nullptr, isMouseInside(exit_buttonRect, mouseX, mouseY) ? &exit_hoverRect : &exit_buttonRect);
+            SDL_RenderCopy(renderer, overallLeaderboard_button, nullptr, isMouseInside(overallLeaderboard_Rect, mouseX, mouseY) ? &overallLeaderboard_hoverRect : &overallLeaderboard_Rect);
         }
         else if (status == 1) {
             SDL_RenderCopy(renderer, gameplaysTitle_Texture, nullptr, &gameplaysTitle_Rect);
@@ -988,6 +1022,11 @@ int main(int argc, char*argv[]) {
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect3);
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[3] != 0) ? cardTextures[players[plrIdSwitch].card_id[3]] : cardTextures[52], nullptr, &cardRect4);
                     SDL_RenderCopy(renderer, (players[plrIdSwitch].openingCards[4] != 0) ? cardTextures[players[plrIdSwitch].card_id[4]] : cardTextures[52], nullptr, &cardRect5);
+                    if (isMouseInside(cardRect1, mouseX, mouseY) && players[plrIdSwitch].openingCards[0] == 0) drawThickOutline(renderer, cardRect1, outlineThickness);
+                    else if (isMouseInside(cardRect2, mouseX, mouseY) && players[plrIdSwitch].openingCards[1] == 0) drawThickOutline(renderer, cardRect2, outlineThickness);
+                    else if (isMouseInside(cardRect3, mouseX, mouseY) && players[plrIdSwitch].openingCards[2] == 0) drawThickOutline(renderer, cardRect3, outlineThickness);
+                    else if (isMouseInside(cardRect4, mouseX, mouseY) && players[plrIdSwitch].openingCards[3] == 0) drawThickOutline(renderer, cardRect4, outlineThickness);
+                    else if (isMouseInside(cardRect5, mouseX, mouseY) && players[plrIdSwitch].openingCards[4] == 0) drawThickOutline(renderer, cardRect5, outlineThickness);
                     if (players[plrIdSwitch].openingCards[0] == 0 || players[plrIdSwitch].openingCards[1] == 0 || players[plrIdSwitch].openingCards[2] == 0 || players[plrIdSwitch].openingCards[3] == 0 || players[plrIdSwitch].openingCards[4] == 0)
                         SDL_RenderCopy(renderer, flipAll_Texture, nullptr, isMouseInside(flipAll_buttonRect, mouseX, mouseY) ? &flipAll_hoverRect : &flipAll_buttonRect);
                     else 
@@ -997,6 +1036,9 @@ int main(int argc, char*argv[]) {
                     SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[0] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[0]] : cardTextures[52], nullptr, &cardRect2);
                     SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[1] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[1]] : cardTextures[52], nullptr, &cardRect3);
                     SDL_RenderCopy(renderer, (baccarat_players[plrIdSwitch].openingCards[2] != 0) ? cardTextures[baccarat_players[plrIdSwitch].card_id[2]] : cardTextures[52], nullptr, &cardRect4);
+                    if (isMouseInside(cardRect2, mouseX, mouseY) && players[plrIdSwitch].openingCards[2] == 0) drawThickOutline(renderer, cardRect2, outlineThickness);
+                    else if (isMouseInside(cardRect3, mouseX, mouseY) && players[plrIdSwitch].openingCards[3] == 0) drawThickOutline(renderer, cardRect3, outlineThickness);
+                    else if (isMouseInside(cardRect4, mouseX, mouseY) && players[plrIdSwitch].openingCards[4] == 0) drawThickOutline(renderer, cardRect4, outlineThickness);
                     if (baccarat_players[plrIdSwitch].openingCards[0] == 0 || baccarat_players[plrIdSwitch].openingCards[1] == 0 || baccarat_players[plrIdSwitch].openingCards[2] == 0)
                         SDL_RenderCopy(renderer, flipAll_Texture, nullptr, isMouseInside(flipAll_buttonRect, mouseX, mouseY) ? &flipAll_hoverRect : &flipAll_buttonRect);
                     else 
@@ -1065,6 +1107,26 @@ int main(int argc, char*argv[]) {
                 SDL_RenderCopy(renderer, next_Texture, nullptr, isMouseInside(next_buttonRect, mouseX, mouseY) ? &tmpHoverRect : &tmpRect);
                 SDL_RenderCopy(renderer, playAgainButton_Texture, nullptr, isMouseInside(playAgainButton_Rect, mouseX, mouseY) ? &playAgainButton_hoverRect : &playAgainButton_Rect);
             }
+        }
+        else if (status == 9) {
+            SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
+            SDL_RenderCopy(renderer, backButton_Texture, nullptr, isMouseInside(backButton_Rect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
+            SDL_Rect information_Rect = {115, 135, 85, 50};
+            SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
+            SDL_Texture* information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+            information_Rect = {information_Rect.x + 210, information_Rect.y, 255, information_Rect.h};
+            information = TTF_RenderText_Solid(SuperPixel_font, "Player's Name", whiteColor);
+            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+            information_Rect = {information_Rect.x + 390, information_Rect.y, 85, information_Rect.h};
+            information = TTF_RenderText_Solid(SuperPixel_font, "Wins", whiteColor);
+            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
+            information_Rect = {information_Rect.x + 210, information_Rect.y, 140, information_Rect.h};
+            information = TTF_RenderText_Solid(SuperPixel_font, "Winrate", whiteColor);
+            information_Texture = SDL_CreateTextureFromSurface(renderer, information);
+            SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
         }
         SDL_RenderPresent(renderer);
 

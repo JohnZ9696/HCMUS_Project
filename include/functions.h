@@ -8,6 +8,7 @@
 #include "Poker/PokerPlayerStats.h"
 #include <unordered_set>
 #include <cmath>
+#include "Data.h"
 #define WIDTH 1200
 #define HEIGHT 680
 
@@ -23,17 +24,41 @@ void close(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* current_imag
 
 bool isMouseInside(const SDL_Rect& buttonRect, int mouseX, int mouseY); //Kiem tra xem con trỏ chuôt có đang trong nut button
 
-void handleHoverSound(bool& isHovering, bool& wasHovering, Mix_Chunk* hoverSound); 
+void handleHoverSound(bool& isHovering, bool& wasHovering, Mix_Chunk* hoverSound); //Xu li hover sound cua button
 
-void closeText(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font);
+void closeText(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font); // Giai phong text
 
-SDL_Texture* renderText(const std::string& text, TTF_Font* font, SDL_Color color, SDL_Renderer* renderer);
+SDL_Texture* renderText(const std::string& text, TTF_Font* font, SDL_Color color, SDL_Renderer* renderer); // render text
 
-void renderTextInput(SDL_Renderer* renderer, TTF_Font* font, const std::string& text, SDL_Color color, SDL_Rect rect);
+void renderTextInput(SDL_Renderer* renderer, TTF_Font* font, const std::string& text, SDL_Color color, SDL_Rect rect); //render text khi nhap du lieu
 
-bool alreadyUsedName (std::vector<Players> &players, std::string name, short playerAmount, short plrOrder);
+bool alreadyUsedName (std::vector<Players> &players, std::string name, short playerAmount, short plrOrder); // Kiem tra xem name có trùng hay không
 
+void loadData(std::vector<Player_Data> &players_data) {
+    std::ifstream fin("data.txt");
+    if (!fin.is_open()) {
+        std::cerr << "Error occured when opening data!";
+        SDL_Quit();
+    }
 
+    int idx = 0;
+    std::string tmp;
+    while (getline(fin, tmp, ' ')) {
+        Player_Data player;
+        players_data.push_back(player);
+        players_data[idx].username = tmp;
+        getline(fin, tmp, ' ');
+        players_data[idx].wins = stoi(tmp);
+        getline(fin, tmp, ' ');
+        players_data[idx].battles = stoi(tmp); 
+        idx++;
+    }
+    fin.close();
+}
+
+void saveData() {
+    
+}
 
 
 void handleHoverSound(bool& isHovering, bool& wasHovering, Mix_Chunk* hoverSound) {

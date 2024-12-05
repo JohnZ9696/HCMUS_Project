@@ -275,15 +275,12 @@ void sortWinner(std::vector<Baccarat_Players> players, std::vector<int>& winners
     }
 }
 
-//Chat gpt helped me to make player have lower chance to win against bots
-void PVE_Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
-    // Initialize random number generator
+void Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
     int mark[52] = {0};
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 51);
 
-    // Assign random cards to players
     for (int i = 0; i < playerAmount; i++) {
         for (int j = 0; j < 3; j++) {
             int random_number;
@@ -291,11 +288,10 @@ void PVE_Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
                 random_number = dist(gen);
             } while (mark[random_number] != 0);
 
-            mark[random_number] = 1; // Mark card as used
+            mark[random_number] = 1;
             players[i].card_id[j] = random_number;
 
-            // Map card_id to rank and suit
-            int rankIndex = random_number / 4 + 2; // Corrected rank mapping
+            int rankIndex = random_number / 4 + 2;
             int suitIndex = random_number % 4;
             players[i].cards[j].rank = (rankIndex == 14) ? Baccarat_Cards::ACE : static_cast<Baccarat_Cards::Rank>(rankIndex);
             players[i].cards[j].suit = static_cast<Baccarat_Cards::Suit>(suitIndex);
@@ -309,25 +305,30 @@ void PVE_Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
 
 }
 
-void Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
+//Chat gpt helped me to make player have lower chance to win against bots
+void PVE_Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
     // Initialize random number generator
     int mark[52] = {0};
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 51);
 
-    // Assign deterministic cards to the first player
-    Baccarat_Cards lowCards[] = {
-        {Baccarat_Cards::CLUBS, Baccarat_Cards::TWO},
-        {Baccarat_Cards::DIAMONDS, Baccarat_Cards::FOUR},
-        {Baccarat_Cards::HEARTS, Baccarat_Cards::SIX}
-    };
+    // Assign low cards randomly to the first player
+    std::vector<int> lowRanks = {2, 3, 4, 5, 6, 7}; // Low ranks to select from
+    std::shuffle(lowRanks.begin(), lowRanks.end(), gen);
 
+    Baccarat_Cards lowCards[3];
     for (int i = 0; i < 3; ++i) {
-        int rankIndex = lowCards[i].rank - 2; // Map rank to card ID
-        int suitIndex = lowCards[i].suit;
-        int cardId = rankIndex * 4 + suitIndex;
+        int rank = lowRanks[i]; // Select a random rank
+        int suit = dist(gen) % 4; // Random suit for the rank
+        int cardId = (rank - 2) * 4 + suit;
 
+        while (mark[cardId] != 0) { // Avoid duplicates
+            suit = dist(gen) % 4;
+            cardId = (rank - 2) * 4 + suit;
+        }
+
+        lowCards[i] = {static_cast<Baccarat_Cards::Suit>(suit), static_cast<Baccarat_Cards::Rank>(rank)};
         players[0].cards[i] = lowCards[i];
         players[0].card_id[i] = cardId;
         mark[cardId] = 1; // Mark card as used
@@ -357,3 +358,4 @@ void Baccarat(std::vector<Baccarat_Players>& players, int playerAmount) {
         player.score = calculateScore(player, 3);
     }
 }
+

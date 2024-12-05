@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/lib",
-                "C:/msys64/mingw64/include/c++/14.1.0"
+                "${workspaceFolder}/src"
             ],
             "compilerPath": "${workspaceFolder}/bin/g++.exe",
             "cStandard": "c17",
