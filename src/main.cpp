@@ -3,6 +3,7 @@
 #include "Baccarat/Baccarat.h"
 #include "Data.h"
 #include <fstream>
+
 /*
 Status numbers:
 -1: Loading screen
@@ -25,15 +26,6 @@ Gameplay status numbers:
 3: Baccarat
 */
 
-void drawThickOutline(SDL_Renderer* renderer, SDL_Rect& rect, int thickness) {
-    // Vẽ outline dày bằng cách vẽ nhiều lớp cạnh
-    SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
-    for (int i = 0; i < thickness; ++i) {
-        // Vẽ từng đường viền dày dần theo lớp
-        SDL_Rect outlineRect = {rect.x - i-2, rect.y - i-2, rect.w + 2 * i+4, rect.h + 2 * i+4};
-        SDL_RenderDrawRect(renderer, &outlineRect);
-    }
-}
 int main(int argc, char*argv[]) {
     std::vector<Player_Data> players_data;
 
@@ -525,7 +517,7 @@ int main(int argc, char*argv[]) {
         return -1;
     }
 
-    int scrollOffset = 0, leaderBoardScrollOffset = 0;
+    int scrollOffset = 0, leaderBoardScrollOffset = 0, overallLeaderboardOffset = 0;
     bool quit = false;
     SDL_Event e;
     int battles = 0;
@@ -568,6 +560,9 @@ int main(int argc, char*argv[]) {
         else if (status == 8) {
             isHovering = isMouseInside(tmpRect, mouseX, mouseY) || isMouseInside(playAgainButton_Rect, mouseX, mouseY);
         }
+        else if (status == 9) {
+            isHovering = isMouseInside(backButton_Rect, mouseX, mouseY);
+        }
         if (isHovering && !wasHovering && isPlayingSoundFX) {
             Mix_PlayChannel(-1, hoverSound, 0);
         }
@@ -592,6 +587,11 @@ int main(int argc, char*argv[]) {
                     leaderBoardScrollOffset -= e.wheel.y * 20;
                     leaderBoardScrollOffset = std::max(0, leaderBoardScrollOffset); // Prevent scrolling above content
                     leaderBoardScrollOffset = std::min(playerAmount*70, leaderBoardScrollOffset);        
+                }
+                else if (status == 9) {
+                    overallLeaderboardOffset -= e.wheel.y * 20;
+                    overallLeaderboardOffset = std::max(0, overallLeaderboardOffset); // Prevent scrolling above content
+                    overallLeaderboardOffset = std::min((int)players_data.size()*70, overallLeaderboardOffset);    
                 }
                 
             }
@@ -740,7 +740,6 @@ int main(int argc, char*argv[]) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         bool alreadyUsedNameCheck = (game_status == 1) ? alreadyUsedName(players, inputUsernameText, playerAmount, plrIdSwitch) : BaccaratAlreadyUsedName(baccarat_players, inputUsernameText, playerAmount, plrIdSwitch);
                         if (inputUsernameText != "Enter here" && inputUsernameText != "" && !alreadyUsedNameCheck) {
-                            
                             if (game_status == 1) players[plrIdSwitch++].username = inputUsernameText;
                             else if (game_status == 3) baccarat_players[plrIdSwitch++].username = inputUsernameText;
                             wrongAnswer = 0;
@@ -796,21 +795,31 @@ int main(int argc, char*argv[]) {
                             else {
                                 for (auto& player : players) {
                                     player.handStrength = evaluateHandStrength(player.cards);
+                                    if (!playerAlreadyInData(players_data, player.username)) {
+                                        createNewPlayerInData(players_data, player.username);
+                                    }
+                                    if (!isPVP) break;
                                 }
                                 winners = findWinner(players);
-                                for (int winner : winners) {
-                                    std::cout << "Battle " << battles << "Winner: " << players[winner].username << " with hand " << players[winner].handStrength << "\n";
+                                for (int winner : winners) { 
                                     players[winner].wins++;
-                            
+                                    for (auto &player_data : players_data) {
+                                        if (player_data.username == players[winner].username) player_data.wins++;
+                                    }
                                     updateStrategy(winner, players);
                                 }
                                 findFavoriteStrategy(players);
                                 for (auto& player : players) {
                                     player.winrate = static_cast<float>(player.wins) / static_cast<float>(battles)*100.0;
+                                    for (auto &player_data : players_data) {
+                                        if (player_data.username == player.username) player_data.battles++;
+                                    }
                                 }
                                 sorted_players = players;
                                 sort(sorted_players.begin(), sorted_players.end(), Poker_cmp);
                                 sorted_winners = findWinner(sorted_players);
+
+                                updateData(players_data);
                                 status = 7;
                             } 
                         }
@@ -838,7 +847,13 @@ int main(int argc, char*argv[]) {
                             if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                             if ((plrIdSwitch < playerAmount-1 && isPVP) || (plrIdSwitch < 0 && !isPVP)) plrIdSwitch++;
                             else {
-                        
+                                for (auto& player : players) {
+                                    player.handStrength = evaluateHandStrength(player.cards);
+                                    if (!playerAlreadyInData(players_data, player.username)) {
+                                        createNewPlayerInData(players_data, player.username);
+                                    }
+                                    if (!isPVP) break;
+                                }
                                 determineWinner(baccarat_players, winners);
                             
                                 for (auto& player : baccarat_players) {
@@ -847,6 +862,7 @@ int main(int argc, char*argv[]) {
                                 sorted_baccarat_players = baccarat_players;
                                 sort(sorted_baccarat_players.begin(), sorted_baccarat_players.end(), Baccarat_cmp);
                                 sortWinner(sorted_baccarat_players, sorted_winners);
+                                updateData(players_data);
                                 status = 7;
                             } 
                         }
@@ -894,7 +910,10 @@ int main(int argc, char*argv[]) {
                     }
                 }
                 else if (status == 9) {
-                    
+                    if (isMouseInside(backButton_Rect, mouseX, mouseY)) {
+                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                        status = 0;
+                    }
                 }
             }
             else if (e.type == SDL_TEXTINPUT && inputActive) {
@@ -1110,6 +1129,7 @@ int main(int argc, char*argv[]) {
         }
         else if (status == 9) {
             SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
+            renderOverallLeaderBoardScroll(renderer, SuperPixel_font, overallLeaderboardOffset, players_data, (int)players_data.size(), top1crown_Texture);
             SDL_RenderCopy(renderer, backButton_Texture, nullptr, isMouseInside(backButton_Rect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
             SDL_Rect information_Rect = {115, 135, 85, 50};
             SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
