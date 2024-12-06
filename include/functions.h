@@ -113,7 +113,7 @@ void renderOverallLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int 
     int lineHeight = 70;
 
     // Size cua scroll frame
-    SDL_Rect viewport = { 70, 200, 1100, 400 };
+    SDL_Rect viewport = { 70, 220, 1100, 400 };
     SDL_RenderSetClipRect(renderer, &viewport);
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -143,7 +143,7 @@ void renderOverallLeaderBoardScroll(SDL_Renderer* renderer, TTF_Font* font, int 
     }
     SDL_Rect textRect, crownRect;
     for (int i = 0; i < playerAmount; ++i) {
-        int y = 200 + i * lineHeight - scrollOffset;
+        int y = 220 + i * lineHeight - scrollOffset;
 
         if (y + lineHeight < viewport.y || y > viewport.y + viewport.h) {
             continue;

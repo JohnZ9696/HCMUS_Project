@@ -112,6 +112,13 @@ int main(int argc, char*argv[]) {
         return -1;
     }
 
+
+    SDL_Texture* overallLeaderboard_Texture = loadTexture("image/overallLeaderboard_texture.png", renderer);
+    if (overallLeaderboard_Texture == nullptr) {
+        std::cerr << "Failed to load overallLeaderboard texture!" << std::endl;
+        close(window, renderer, overallLeaderboard_Texture, nullptr, nullptr, 1);
+        return -1;
+    }
     std::vector<Cards> card(52);
 
     SDL_Rect next_buttonRect = { 920, 560, 200, 100 }; 
@@ -1128,10 +1135,10 @@ int main(int argc, char*argv[]) {
             }
         }
         else if (status == 9) {
-            SDL_RenderCopy(renderer, gameLeaderBoard_Texture, nullptr, &gameLeaderBoard_Rect);
+            SDL_RenderCopy(renderer, overallLeaderboard_Texture, nullptr, &gameLeaderBoard_Rect);
             renderOverallLeaderBoardScroll(renderer, SuperPixel_font, overallLeaderboardOffset, players_data, (int)players_data.size(), top1crown_Texture);
             SDL_RenderCopy(renderer, backButton_Texture, nullptr, isMouseInside(backButton_Rect, mouseX, mouseY) ? &backButton_hoverRect : &backButton_Rect);
-            SDL_Rect information_Rect = {115, 135, 85, 50};
+            SDL_Rect information_Rect = {115, 155, 85, 50};
             SDL_Surface* information = TTF_RenderText_Solid(SuperPixel_font, "Rank", whiteColor);
             SDL_Texture* information_Texture = SDL_CreateTextureFromSurface(renderer, information);
             SDL_RenderCopy(renderer, information_Texture, nullptr, &information_Rect);
