@@ -2,7 +2,6 @@
 #include "Poker/Poker.h"
 #include "Baccarat/Baccarat.h"
 #include "Data.h"
-#include <fstream>
 
 /*
 Status numbers:
@@ -460,7 +459,7 @@ int main(int argc, char*argv[]) {
 
 
     //Status 1
-    SDL_Rect gameplaysTitle_Rect = { 400, 80, 400, 100 }; 
+    SDL_Rect gameplaysTitle_Rect = { 400, 100, 400, 100 }; 
     SDL_Texture* gameplaysTitle_Texture = loadTexture("image/gameplays_title.png", renderer);
     if (gameplaysTitle_Texture == nullptr) {
         std::cerr << "Failed to load gameplays title texture!" << std::endl;
@@ -468,7 +467,7 @@ int main(int argc, char*argv[]) {
         return -1;
     }
 
-    SDL_Rect Poker_buttonRect = { 475, 230, 260, 100 }; 
+    SDL_Rect Poker_buttonRect = { 475, 270, 260, 100 }; 
     SDL_Rect Poker_hoverRect = { Poker_buttonRect.x - 10, Poker_buttonRect.y - 10, Poker_buttonRect.w + 20, Poker_buttonRect.h + 20 };
     SDL_Texture* Poker_buttonTexture = loadTexture("image/Poker_button.png", renderer);
     if (Poker_buttonTexture == nullptr) {
@@ -486,7 +485,7 @@ int main(int argc, char*argv[]) {
         return -1;
     }
 
-    SDL_Rect Baccarat_buttonRect = { 475, 500, 260, 100 }; 
+    SDL_Rect Baccarat_buttonRect = { 475, 440, 260, 100 }; 
     SDL_Rect Baccarat_hoverRect = { Baccarat_buttonRect.x - 10, Baccarat_buttonRect.y - 10, Baccarat_buttonRect.w + 20, Baccarat_buttonRect.h + 20 };
     SDL_Texture* Baccarat_buttonTexture = loadTexture("image/Baccarat_button.png", renderer);
     if (Baccarat_buttonTexture == nullptr) {
@@ -628,11 +627,11 @@ int main(int argc, char*argv[]) {
                         status = 3;
                         game_status = 1;
                     }
-                    else if (isMouseInside(BigTwo_buttonRect, mouseX, mouseY)) {
-                        if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
-                        status = 3;
-                        game_status = 2;
-                    }
+                    // else if (isMouseInside(BigTwo_buttonRect, mouseX, mouseY)) {
+                    //     if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
+                    //     status = 3;
+                    //     game_status = 2;
+                    // }
                     else if (isMouseInside(Baccarat_buttonRect, mouseX, mouseY)) {
                         if (isPlayingSoundFX) Mix_PlayChannel(-1, clickSound, 0);
                         status = 3;
@@ -802,6 +801,8 @@ int main(int argc, char*argv[]) {
                             else {
                                 for (auto& player : players) {
                                     player.handStrength = evaluateHandStrength(player.cards);
+                                }
+                                for (auto& player : players) {
                                     if (!playerAlreadyInData(players_data, player.username)) {
                                         createNewPlayerInData(players_data, player.username);
                                     }
@@ -856,6 +857,8 @@ int main(int argc, char*argv[]) {
                             else {
                                 for (auto& player : players) {
                                     player.handStrength = evaluateHandStrength(player.cards);
+                                }
+                                for (auto& player : players) {
                                     if (!playerAlreadyInData(players_data, player.username)) {
                                         createNewPlayerInData(players_data, player.username);
                                     }
@@ -956,7 +959,7 @@ int main(int argc, char*argv[]) {
             SDL_RenderCopy(renderer, gameplaysTitle_Texture, nullptr, &gameplaysTitle_Rect);
             SDL_RenderCopy(renderer, Baccarat_buttonTexture, nullptr, isMouseInside(Baccarat_buttonRect, mouseX, mouseY) ? &Baccarat_hoverRect : &Baccarat_buttonRect);
             SDL_RenderCopy(renderer, Poker_buttonTexture, nullptr, isMouseInside(Poker_buttonRect, mouseX, mouseY) ? &Poker_hoverRect : &Poker_buttonRect);
-            SDL_RenderCopy(renderer, BigTwo_buttonTexture, nullptr, isMouseInside(BigTwo_buttonRect, mouseX, mouseY) ? &BigTwo_hoverRect : &BigTwo_buttonRect);
+            // SDL_RenderCopy(renderer, BigTwo_buttonTexture, nullptr, isMouseInside(BigTwo_buttonRect, mouseX, mouseY) ? &BigTwo_hoverRect : &BigTwo_buttonRect);
         }
         else if (status == 2) {
             SDL_RenderCopy(renderer, settingBoard_Texture, nullptr, &settingBoard_Rect);
